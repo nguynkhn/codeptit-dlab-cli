@@ -74,6 +74,10 @@ func (c *Client) Do[V any](req *http.Request) (V, error) {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return data, fmt.Errorf("HTTP request failed with status code: %d", resp.StatusCode)
+	}
+
 	if resp.Header.Get("X-PTIT-Enc-Res") == "1" {
 		dataBytes, err := DecryptEnvelope(resp.Body, c.signKey)
 		if err != nil {

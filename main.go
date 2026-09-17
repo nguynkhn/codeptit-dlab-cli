@@ -8,21 +8,15 @@ import (
 
 func main() {
 	client := NewClient()
-	reader := bufio.NewReader(os.Stdin)
+	reader := bufio.NewScanner(os.Stdin)
 
 	fmt.Print("Enter your username: ")
-	username, err := reader.ReadString('\n')
-	if err != nil {
-		fmt.Println("An error occurred:", err)
-		return
-	}
+	reader.Scan()
+	username := reader.Text()
 
 	fmt.Print("Enter your password: ")
-	password, err := reader.ReadString('\n')
-	if err != nil {
-		fmt.Println("An error occurred:", err)
-		return
-	}
+	reader.Scan()
+	password := reader.Text()
 
 	if err := client.Login(username, password); err != nil {
 		fmt.Println("An error occurred:", err)

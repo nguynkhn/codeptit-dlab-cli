@@ -4,7 +4,7 @@ import "time"
 
 type ChallengeResponse struct {
 	Challenge     string `json:"challenge"`
-	EncryptionKey []byte `json:"enc_key"`
+	EncryptionKey string `json:"enc_key"`
 }
 
 type LoginRequest struct {
@@ -15,7 +15,7 @@ type LoginRequest struct {
 type LoginResponse struct {
 	AccessToken  string `json:"token"`
 	RefreshToken string `json:"refresh_token"`
-	SignKey      []byte `json:"sign_key"`
+	SignKey      string `json:"sign_key"`
 	ServerNow    int64  `json:"server_now"`
 }
 
@@ -30,7 +30,7 @@ func (c *Client) Login(username, passsword string) error {
 		return err
 	}
 
-	c.signKey = challengeResp.EncryptionKey
+	c.signKey = []byte(challengeResp.EncryptionKey)
 
 	loginReq, err := c.NewRequest("POST", "/auth/login", &LoginRequest{
 		Username: username, Password: passsword,
@@ -47,7 +47,7 @@ func (c *Client) Login(username, passsword string) error {
 
 	c.accessToken = loginResp.AccessToken
 	c.refreshToken = loginResp.RefreshToken
-	c.signKey = loginResp.SignKey
+	c.signKey = []byte(loginResp.SignKey)
 	c.skewMs = loginResp.ServerNow - time.Now().UnixMilli()
 
 	return nil
@@ -55,12 +55,12 @@ func (c *Client) Login(username, passsword string) error {
 
 type RefreshResponse struct {
 	AccessToken string `json:"token"`
-	SignKey     []byte `json:"sign_key"`
+	SignKey     string `json:"sign_key"`
 	ServerNow   int64  `json:"server_now"`
 }
 
 type SignKeyResponse struct {
-	SignKey   []byte `json:"sign_key"`
+	SignKey   string `json:"sign_key"`
 	ServerNow int64  `json:"server_now"`
 }
 
@@ -77,7 +77,7 @@ func (c *Client) Refresh() error {
 	}
 
 	c.accessToken = refreshResp.AccessToken
-	c.signKey = refreshResp.SignKey
+	c.signKey = []byte(refreshResp.SignKey)
 	c.skewMs = refreshResp.ServerNow - time.Now().UnixMilli()
 
 	return nil

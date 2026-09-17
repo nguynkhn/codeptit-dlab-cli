@@ -50,7 +50,7 @@ func (c *Client) NewRequest[V any](method, endpoint string, data *V) (*http.Requ
 		req.Header.Set("X-PTIT-Enc-Req", "1")
 	}
 
-	if c.signKey != nil {
+	if c.signKey != nil && c.accessToken != "" {
 		signature, err := CreateSignature(c.signKey, req.Method, req.URL.Path, buffer.Bytes(), c.skewMs)
 		if err != nil {
 			return nil, err

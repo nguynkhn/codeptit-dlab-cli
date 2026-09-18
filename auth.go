@@ -2,10 +2,14 @@ package main
 
 import "time"
 
+type SignKeyResponse struct {
+	SignKey   string `json:"sign_key"`
+	ServerNow int64  `json:"server_now"`
+}
+
 type RefreshResponse struct {
 	AccessToken string `json:"token"`
-	SignKey     string `json:"sign_key"`
-	ServerNow   int64  `json:"server_now"`
+	SignKeyResponse
 }
 
 type ChallengeResponse struct {
@@ -23,11 +27,30 @@ type LoginResponse struct {
 	RefreshResponse
 }
 
-func (c *Client) updateToken(resp RefreshResponse) error {
+func (c *Client) updateSignKey(resp SignKeyResponse) {
 	c.session.SignKey = []byte(resp.SignKey)
 	c.session.SkewMs = resp.ServerNow - time.Now().UnixMilli()
+}
+
+func (c *Client) updateToken(resp RefreshResponse) error {
 	c.session.AccessToken = resp.AccessToken
+	c.updateSignKey(resp.SignKeyResponse)
 	return c.store.Save(&c.session)
+}
+
+func (c *Client) SignKey() error {
+	signKeyReq, err := c.NewRequest[struct{}]("GET", "/auth/sign-key", nil)
+	if err != nil {
+		return err
+	}
+
+	signKeyResp, err := c.Do[SignKeyResponse](signKeyReq)
+	if err != nil {
+		return nil
+	}
+
+	c.updateSignKey(signKeyResp)
+	return nil
 }
 
 func (c *Client) Refresh() error {

@@ -7,8 +7,8 @@ import (
 )
 
 type Session struct {
+	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
-	AccessToken  string `json:"-"`
 	SignKey      []byte `json:"-"`
 	SkewMs       int64  `json:"-"`
 }

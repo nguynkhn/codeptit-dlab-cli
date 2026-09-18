@@ -30,11 +30,15 @@ func main() {
 			return
 		}
 		fmt.Println("Logged in successfully")
-	} else {
+		return
+	}
+
+	if err := client.SignKey(); err != nil {
 		if err := client.Refresh(); err != nil {
 			fmt.Println("An error occurred:", err)
 			return
 		}
+
 		fmt.Println("Refreshed successfully")
 	}
 }

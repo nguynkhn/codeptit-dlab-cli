@@ -7,58 +7,68 @@ import (
 	"net/http"
 )
 
-const BASE_URL = "https://code.ptit.edu.vn/api"
-
 type Client struct {
 	httpClient *http.Client
-
-	accessToken  string
-	refreshToken string
-
-	signKey []byte
-	skewMs  int64
+	session    Session
+	store      Store
 }
 
-func NewClient() Client {
-	return Client{httpClient: &http.Client{}}
+func NewClient(store Store) (*Client, error) {
+	c := Client{httpClient: &http.Client{}, store: store}
+	if err := c.store.Load(&c.session); err != nil {
+		return nil, err
+	}
+
+	return &c, nil
+}
+
+func (c *Client) LoggedIn() bool {
+	return c.session.RefreshToken != ""
 }
 
 func (c *Client) NewRequest[V any](method, endpoint string, data *V) (*http.Request, error) {
-	var buffer bytes.Buffer
-	if data != nil {
+	var body bytes.Buffer
+	if data != nil && c.session.SignKey != nil {
 		dataBytes, err := json.Marshal(data)
 		if err != nil {
 			return nil, err
 		}
 
-		if err := EncryptEnvelope(&buffer, c.signKey, dataBytes); err != nil {
+		if err := EncryptEnvelope(&body, c.session.SignKey, dataBytes); err != nil {
 			return nil, err
 		}
 	}
 
-	req, err := http.NewRequest(method, BASE_URL+endpoint, &buffer)
+	req, err := http.NewRequest(method, "https://code.ptit.edu.vn/api"+endpoint, &body)
 	if err != nil {
 		return nil, err
 	}
 
-	if c.accessToken != "" {
-		req.Header.Set("Authorization", "Bearer "+c.accessToken)
-	}
-
-	if buffer.Len() > 0 {
+	if body.Len() > 0 {
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-PTIT-Enc-Req", "1")
 	}
 
-	if c.signKey != nil && c.accessToken != "" {
-		signature, err := CreateSignature(c.signKey, req.Method, req.URL.Path, buffer.Bytes(), c.skewMs)
-		if err != nil {
-			return nil, err
-		}
+	if c.session.AccessToken != "" {
+		req.Header.Set("Authorization", "Bearer "+c.session.AccessToken)
 
-		req.Header.Set("X-PTIT-Sign", signature.Sign)
-		req.Header.Set("X-PTIT-Sign-Nonce", signature.Nonce)
-		req.Header.Set("X-PTIT-Sign-Ts", fmt.Sprint(signature.Timestamp))
+		if c.session.SignKey != nil {
+			signature, err := CreateSignature(
+				c.session.SignKey,
+				req.Method,
+				req.URL.Path,
+				body.Bytes(),
+				c.session.SkewMs,
+			)
+
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-PTIT-Sign", signature.Sign)
+			req.Header.Set("X-PTIT-Sign-Nonce", signature.Nonce)
+			req.Header.Set("X-PTIT-Sign-Ts", fmt.Sprint(signature.Timestamp))
+		}
 	}
 
 	return req, nil
@@ -74,12 +84,12 @@ func (c *Client) Do[V any](req *http.Request) (V, error) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return data, fmt.Errorf("HTTP request failed with status code: %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusOK {
+		return data, fmt.Errorf("Non-OK HTTP status received: %d", resp.StatusCode)
 	}
 
 	if resp.Header.Get("X-PTIT-Enc-Res") == "1" {
-		dataBytes, err := DecryptEnvelope(resp.Body, c.signKey)
+		dataBytes, err := DecryptEnvelope(resp.Body, c.session.SignKey)
 		if err != nil {
 			return data, err
 		}
@@ -91,5 +101,5 @@ func (c *Client) Do[V any](req *http.Request) (V, error) {
 		return data, err
 	}
 
-	return data, err
+	return data, nil
 }

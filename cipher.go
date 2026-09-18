@@ -70,17 +70,20 @@ func DecryptEnvelope(reader io.Reader, signKey []byte) ([]byte, error) {
 }
 
 type Signature struct {
+	Timestamp int64
 	Nonce     string
 	Sign      string
-	Timestamp int64
 }
 
-func CreateSignature(signKey []byte, method, path string, body []byte, skewMs int64) (Signature, error) {
-	var signature Signature
-
-	nonce, err := generateNonce(16)
+func CreateSignature(
+	signKey []byte,
+	method, path string, body []byte,
+	skewMs int64,
+) (signature Signature, err error) {
+	const NONCE_SIZE = 16
+	nonce, err := generateNonce(NONCE_SIZE)
 	if err != nil {
-		return signature, err
+		return
 	}
 
 	signature.Timestamp = time.Now().UnixMilli() + skewMs
@@ -94,12 +97,11 @@ func CreateSignature(signKey []byte, method, path string, body []byte, skewMs in
 		nonce,
 		sha256.Sum256(body),
 	)
-	mac := hmac.New(sha256.New, signKey)
-	if _, err := mac.Write([]byte(canonical)); err != nil {
-		return signature, err
-	}
 
-	sign := mac.Sum(nil)
-	signature.Sign = hex.EncodeToString(sign)
-	return signature, nil
+	mac := hmac.New(sha256.New, signKey)
+	if _, err = mac.Write([]byte(canonical)); err != nil {
+		return
+	}
+	signature.Sign = hex.EncodeToString(mac.Sum(nil))
+	return
 }

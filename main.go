@@ -1,44 +1,52 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
+	"maps"
 	"os"
+	"path/filepath"
+	"slices"
+	"strings"
 )
 
+var subCommands = map[string]func(c *Client){
+	"login":  LoginCommand,
+	"course": CourseCommand,
+}
+
 func main() {
-	store := FileStore{path: "session.json"}
-	client, err := NewClient(&store)
+	if len(os.Args) < 2 {
+		prog := filepath.Base(os.Args[0])
+		listCmds := strings.Join(slices.Collect(maps.Keys(subCommands)), "|")
+		fmt.Println("Usage:", prog, listCmds)
+		return
+	}
+
+	subCmd := strings.ToLower(os.Args[1])
+	executor, ok := subCommands[subCmd]
+	if !ok {
+		fmt.Println("Unknown command")
+		return
+	}
+
+	client, err := NewClient(&FileStore{path: "session.json"})
 	if err != nil {
-		fmt.Println("An error occurred:", err)
+		fmt.Println("Failed to initialize client:", err)
 		return
 	}
 
-	if !client.LoggedIn() {
-		reader := bufio.NewScanner(os.Stdin)
-
-		fmt.Print("Enter your username: ")
-		reader.Scan()
-		username := reader.Text()
-
-		fmt.Print("Enter your password: ")
-		reader.Scan()
-		password := reader.Text()
-
-		if err := client.Login(username, password); err != nil {
-			fmt.Println("An error occurred:", err)
-			return
-		}
-		fmt.Println("Logged in successfully")
+	if subCmd != "login" && !client.LoggedIn() {
+		fmt.Println("Please log in first")
 		return
 	}
 
-	if err := client.SignKey(); err != nil {
+	if client.SignKey() != nil {
 		if err := client.Refresh(); err != nil {
-			fmt.Println("An error occurred:", err)
+			fmt.Println("Failed to refresh:", err)
+			fmt.Println("Please try logging in again")
 			return
 		}
-
-		fmt.Println("Refreshed successfully")
 	}
+
+	executor(client)
 }

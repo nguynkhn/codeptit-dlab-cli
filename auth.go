@@ -1,6 +1,11 @@
 package main
 
-import "time"
+import (
+	"bufio"
+	"fmt"
+	"os"
+	"time"
+)
 
 type SignKeyResponse struct {
 	SignKey   string `json:"sign_key"`
@@ -33,7 +38,7 @@ func (c *Client) updateSignKey(resp SignKeyResponse) {
 }
 
 func (c *Client) updateToken(resp RefreshResponse) error {
-	c.session.AccessToken = resp.AccessToken
+	c.session.AccessToken = &resp.AccessToken
 	c.updateSignKey(resp.SignKeyResponse)
 	return c.store.Save(&c.session)
 }
@@ -59,7 +64,7 @@ func (c *Client) Refresh() error {
 		return err
 	}
 
-	refreshReq.Header.Set("Authorization", "Bearer "+c.session.RefreshToken)
+	refreshReq.Header.Set("Authorization", "Bearer "+*c.session.RefreshToken)
 	refreshResp, err := c.Do[RefreshResponse](refreshReq)
 	if err != nil {
 		return err
@@ -94,6 +99,25 @@ func (c *Client) Login(username, passsword string) error {
 		return err
 	}
 
-	c.session.RefreshToken = loginResp.RefreshToken
+	c.session.RefreshToken = &loginResp.RefreshToken
 	return c.updateToken(loginResp.RefreshResponse)
+}
+
+func LoginCommand(c *Client) {
+	reader := bufio.NewScanner(os.Stdin)
+
+	fmt.Print("Enter your username: ")
+	reader.Scan()
+	username := reader.Text()
+
+	fmt.Print("Enter your password: ")
+	reader.Scan()
+	password := reader.Text()
+
+	if err := c.Login(username, password); err != nil {
+		fmt.Println("Login failed:", err)
+		return
+	}
+
+	fmt.Println("Logged in successfully")
 }

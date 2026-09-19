@@ -23,7 +23,7 @@ func NewClient(store Store) (*Client, error) {
 }
 
 func (c *Client) LoggedIn() bool {
-	return c.session.RefreshToken != ""
+	return c.session.RefreshToken != nil
 }
 
 func (c *Client) NewRequest[V any](method, endpoint string, data *V) (*http.Request, error) {
@@ -39,7 +39,8 @@ func (c *Client) NewRequest[V any](method, endpoint string, data *V) (*http.Requ
 		}
 	}
 
-	req, err := http.NewRequest(method, "https://code.ptit.edu.vn/api"+endpoint, &body)
+	const BASE_URL = "https://code.ptit.edu.vn/api"
+	req, err := http.NewRequest(method, BASE_URL+endpoint, &body)
 	if err != nil {
 		return nil, err
 	}
@@ -49,8 +50,8 @@ func (c *Client) NewRequest[V any](method, endpoint string, data *V) (*http.Requ
 		req.Header.Set("X-PTIT-Enc-Req", "1")
 	}
 
-	if c.session.AccessToken != "" {
-		req.Header.Set("Authorization", "Bearer "+c.session.AccessToken)
+	if c.session.AccessToken != nil {
+		req.Header.Set("Authorization", "Bearer "+*c.session.AccessToken)
 
 		if c.session.SignKey != nil {
 			signature, err := CreateSignature(

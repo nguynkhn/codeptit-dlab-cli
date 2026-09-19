@@ -26,6 +26,13 @@ func (c *Client) LoggedIn() bool {
 	return c.session.RefreshToken != nil
 }
 
+func (c *Client) GetCourse() (int, bool) {
+	if c.session.CourseID == nil {
+		return 0, false
+	}
+	return *c.session.CourseID, true
+}
+
 func (c *Client) NewRequest[V any](method, endpoint string, data *V) (*http.Request, error) {
 	var body bytes.Buffer
 	if data != nil && c.session.SignKey != nil {

@@ -10,7 +10,7 @@ type Session struct {
 	AccessToken  *string `json:"access_token"`
 	RefreshToken *string `json:"refresh_token"`
 
-	CourseId *int `json:"course_id"`
+	CourseID *int `json:"course_id"`
 
 	SignKey []byte `json:"-"`
 	SkewMs  int64  `json:"-"`

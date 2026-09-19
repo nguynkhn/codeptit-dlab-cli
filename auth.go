@@ -44,7 +44,7 @@ func (c *Client) updateToken(resp RefreshResponse) error {
 }
 
 func (c *Client) SignKey() error {
-	signKeyReq, err := c.NewRequest[struct{}]("GET", "/auth/sign-key", nil)
+	signKeyReq, err := c.NewRequest[any]("GET", "/auth/sign-key", nil)
 	if err != nil {
 		return err
 	}
@@ -59,7 +59,7 @@ func (c *Client) SignKey() error {
 }
 
 func (c *Client) Refresh() error {
-	refreshReq, err := c.NewRequest[struct{}]("POST", "/auth/refresh", nil)
+	refreshReq, err := c.NewRequest[any]("POST", "/auth/refresh", nil)
 	if err != nil {
 		return err
 	}
@@ -74,7 +74,7 @@ func (c *Client) Refresh() error {
 }
 
 func (c *Client) Login(username, passsword string) error {
-	challengeReq, err := c.NewRequest[struct{}]("POST", "/auth/pre-auth-challenge", nil)
+	challengeReq, err := c.NewRequest[any]("POST", "/auth/pre-auth-challenge", nil)
 	if err != nil {
 		return err
 	}

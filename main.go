@@ -12,6 +12,7 @@ import (
 var subCommands = map[string]func(c *Client){
 	"login":  LoginCommand,
 	"course": CourseCommand,
+	"submit": SubmitCommand,
 }
 
 func main() {

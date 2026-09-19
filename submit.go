@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 )
 
 type SubmitRequest struct {
@@ -26,10 +28,8 @@ const (
 )
 
 type Submission struct {
-	Status  string  `json:"status"`
-	Verdict string  `json:"verdict"`
-	Runtime float32 `json:"run_time"`
-	Memory  int     `json:"memory"`
+	Status  string `json:"status"`
+	Verdict string `json:"verdict"`
 }
 
 type SubmissionResponse struct {
@@ -69,6 +69,41 @@ func (c *Client) Submission(submissionId int) (Submission, error) {
 
 	submission = submissionResp.Submission
 	return submission, err
+}
+
+func pollSubmission(c *Client, submissionId int) {
+	const (
+		INTERVAL = 1500 * time.Millisecond
+		TIMEOUT  = 10 * time.Second
+	)
+
+	ctx, cancel := context.WithTimeout(context.Background(), TIMEOUT)
+	defer cancel()
+
+	ticker := time.NewTicker(INTERVAL)
+	defer ticker.Stop()
+
+	for {
+		submission, err := c.Submission(submissionId)
+		if err != nil {
+			fmt.Println("Failed to retrieve submission:", err)
+			fmt.Println("Retrying...")
+		} else if submission.Status == StatusDone {
+			fmt.Println("Done! Verdict:", submission.Verdict)
+			return
+		} else if submission.Status == StatusError {
+			fmt.Println("Submission failed")
+			return
+		}
+
+		select {
+		case <-ctx.Done():
+			fmt.Println("Polling timed out:", ctx.Err())
+			return
+
+		case <-ticker.C:
+		}
+	}
 }
 
 func SubmitCommand(c *Client) {
@@ -132,5 +167,12 @@ func SubmitCommand(c *Client) {
 	}
 	problemID := problems[problemIdx].ID
 
-	c.Submit(courseID, problemID, compilerID, sourceCode)
+	submissionId, err := c.Submit(courseID, problemID, compilerID, sourceCode)
+	if err != nil {
+		fmt.Println("Failed to submit code:", err)
+		return
+	}
+
+	fmt.Println("Code submitted! Retrieving status...")
+	pollSubmission(c, submissionId)
 }

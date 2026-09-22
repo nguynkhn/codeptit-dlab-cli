@@ -51,7 +51,7 @@ func (c *Client) SignKey() error {
 
 	signKeyResp, err := c.Do[SignKeyResponse](signKeyReq)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	c.updateSignKey(signKeyResp)

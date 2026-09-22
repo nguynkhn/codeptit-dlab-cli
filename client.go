@@ -92,7 +92,7 @@ func (c *Client) Do[V any](req *http.Request) (V, error) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode < 200 && resp.StatusCode > 299 {
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return data, fmt.Errorf("Non-OK HTTP status received: %d", resp.StatusCode)
 	}
 

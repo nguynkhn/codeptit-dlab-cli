@@ -36,16 +36,18 @@ func main() {
 		return
 	}
 
-	if subCmd != "login" && !client.LoggedIn() {
-		fmt.Println("Please log in first")
-		return
-	}
-
-	if client.SignKey() != nil {
-		if err := client.Refresh(); err != nil {
-			fmt.Println("Failed to refresh:", err)
-			fmt.Println("Please try logging in again")
+	if subCmd != "login" {
+		if !client.LoggedIn() {
+			fmt.Println("Please log in first")
 			return
+		}
+
+		if client.SignKey() != nil {
+			if err := client.Refresh(); err != nil {
+				fmt.Println("Failed to refresh:", err)
+				fmt.Println("Please try logging in again")
+				return
+			}
 		}
 	}
 
